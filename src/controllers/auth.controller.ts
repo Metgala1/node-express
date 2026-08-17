@@ -1,0 +1,51 @@
+import { AppError } from "../errors/app.error.js";
+import { createUser, findUserByEmail , generateToken, verifyPassword } from "../services/auth.service.js";
+import type { Request , Response } from "express";
+
+export const registerController = async (req: Request , res: Response) => {
+    const {name, email, password} = req.body
+
+    const existingUser = await findUserByEmail(email)
+
+    if(existingUser) {
+        throw new AppError("Email already exist", 409)
+    }
+    const user = await createUser(name , email , password)
+    res.status(201).json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+    })
+
+}
+
+export const loginController = async (req: Request , res: Response) => {
+    const {email , password} = req.body
+    const user =  await findUserByEmail(email)
+    
+    if(!user) {
+        throw new AppError("Invalid email or password", 401)
+    }
+    const validPassword = await verifyPassword(password, user.passwordHash)
+    if(!validPassword) {
+        throw new AppError("Invalid email or password", 401)
+    }
+    const token = await generateToken(user.id)
+    console.log(token)
+
+    res.json({
+        token: token
+    })
+
+
+}
+
+export const meController = (
+    req: Request,
+    res: Response
+) => {
+    res.json({
+        userId: req.user?.userId
+    });
+};
