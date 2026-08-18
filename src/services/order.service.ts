@@ -2,7 +2,22 @@ import {prisma} from "../config/prisma.js"
 import { AppError } from "../errors/app.error.js"
 
 export const getAllOrders = async () => {
-    return prisma.order.findMany()
+    return prisma.order.findMany({
+        include: {
+            items: true
+        }
+    })
+}
+
+export const getOrderById = async (id: number) => {
+        return prisma.order.findUnique({
+            where: {
+                id
+            },
+            include : {
+                items: true
+            }
+        })
 }
 
 export const createOrder = async (

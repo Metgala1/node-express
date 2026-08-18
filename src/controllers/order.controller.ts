@@ -1,5 +1,6 @@
 import type { Request , Response } from "express";
-import { createOrder, getAllOrders } from "../services/order.service.js";
+import { createOrder, getAllOrders, getOrderById } from "../services/order.service.js";
+import { AppError } from "../errors/app.error.js";
 
 
 
@@ -15,6 +16,17 @@ export const createOrderController = async (req: Request, res: Response) => {
     const {productId, quantity} = req.body;
 
     const order = await createOrder(userId, productId, quantity)
+    res.json(order)
+
+}
+
+export const getOrderByIdController = async (req: Request, res: Response) => {
+    const id = Number(req.params.id)
+    const order = await getOrderById(id)
+    
+    if(!order) {
+        throw new AppError("Order not found", 404)
+    }
     res.json(order)
 
 }
