@@ -2,27 +2,46 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken"
 
 import { JWT_SECRET } from "../config/env.js";
-import { AuthUser } from "../config/user.js";
-import { users } from "../config/user.js";
+import {prisma} from "../config/prisma.js"
+import {
+    PrismaClientKnownRequestError
+} from "@prisma/client/runtime/client.js";
+import { AppError } from "../errors/app.error.js";
 
-export const findUserByEmail = (email: string) => {
-    return users.find(user => user.email === email)
+export const findUserByEmail = async (email: string) => {
+    return await prisma.user.findUnique({
+        where: {
+            email
+        }
+    })
 }
 
-export const createUser = async (name: string , email: string , password: string) => {
-    const passwordHash = await bcrypt.hash(password, 10)
+export const createUser = async (
+    name: string,
+    email: string,
+    password: string
+) => {
+    const passwordHash = await bcrypt.hash(password, 10);
 
-    const user: AuthUser = {
-        id: users.length + 1,
-        name: name,
-        email: email,
-        role: "admin",
-        passwordHash: passwordHash
+
+    try{
+        return await prisma.user.create({
+            data: {
+                name,
+                email,
+                passwordHash
+            }
+        })
+    }catch(error) {
+        if(error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+            throw new AppError("Email already exist", 409)
+        }
+
+        throw error
     }
 
-    users.push(user)
-    return user;
-}
+    
+};
 
 export const verifyPassword = async (password: string , passwordHash: string) => {
     return bcrypt.compare(password, passwordHash)
@@ -30,11 +49,11 @@ export const verifyPassword = async (password: string , passwordHash: string) =>
 }
 
 export const findUserById = async (id: number) => {
-    const user = users.find((user) => user.id === id)
-    if(!user) {
-        return null
-    }
-    return user
+    return prisma.user.findUnique({
+        where: {
+            id
+        }
+    })
 
 }
 

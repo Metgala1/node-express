@@ -3,8 +3,11 @@ export interface AuthUser {
     name: string;
     email: string;
     role: string;
+    createdAt: Date;
+    updatedAt: Date;
     passwordHash: string;
 }
+
 
 export interface CreateUserRequest {
     name: string;

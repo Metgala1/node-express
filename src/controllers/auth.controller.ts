@@ -14,8 +14,7 @@ export const registerController = async (req: Request , res: Response) => {
     res.status(201).json({
         id: user.id,
         name: user.name,
-        email: user.email,
-        role: user.role
+        email: user.email
     })
 
 }

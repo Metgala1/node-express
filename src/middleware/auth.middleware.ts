@@ -8,19 +8,13 @@ import jwt from "jsonwebtoken";
 
 import { AppError } from "../errors/app.error.js";
 import { JWT_SECRET } from "../config/env.js";
-import { findUserById } from "../services/auth.service.js";
 import { asyncHandler } from "./async.middleware.js"; // Import your asyncHandler
-
+import { getUserById } from "../services/user.service.js";
 export const authenticate = asyncHandler(async (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
-    console.log(
-        "AUTH HEADER:",
-        req.headers.authorization
-    );
-
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
@@ -30,7 +24,8 @@ export const authenticate = asyncHandler(async (
         );
     }
 
-    const [scheme, rawToken] = authHeader.split(" ");
+    const [scheme, rawToken] =
+        authHeader.split(" ");
 
     if (scheme !== "Bearer" || !rawToken) {
         throw new AppError(
@@ -39,7 +34,9 @@ export const authenticate = asyncHandler(async (
         );
     }
 
-    const token = rawToken.replace(/^["']|["']$/g, "").trim();
+    const token = rawToken
+        .replace(/^["']|["']$/g, "")
+        .trim();
 
     let payload: string | jwt.JwtPayload;
 
@@ -75,15 +72,22 @@ export const authenticate = asyncHandler(async (
         );
     }
 
-    const user = await findUserById(userId);
+    const user = await getUserById(userId);
 
     if (!user) {
-        throw new AppError("User not found", 404);
+        throw new AppError(
+            "User not found",
+            404
+        );
     }
 
+    const roles = user.roles.map(
+        userRole => userRole.role.name
+    );
+
     req.user = {
-        userId: userId,
-        role: user.role
+        userId,
+        roles
     };
 
     next();

@@ -1,13 +1,29 @@
 import { AuthUser } from "../config/user.js";
 import { users } from "../config/user.js";
+import {prisma} from "../config/prisma.js"
+import { date } from "zod";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
+import { AppError } from "../errors/app.error.js";
 
-export const getUsers = async ():Promise<AuthUser[]> => {
-    return users;
+export const getUsers = async () => {
+    return prisma.user.findMany();
 }
 
-export const getUserById = async (id: number): Promise<AuthUser | undefined> => {
-    return users.find(user => user.id === id);
+export const getUserById = async (id: number) => {
+    return prisma.user.findUnique({
+        where: {
+            id,
+        },
+        include: {
+            roles: {
+                include: {
+                    role: true
+                }
+            }
+        }
+    });
 };
+
 
 // export const createUser = async (name: string, email: string, password: string): Promise<AuthUser> => {
 //     const newUser = {
@@ -21,22 +37,38 @@ export const getUserById = async (id: number): Promise<AuthUser | undefined> => 
 //     return newUser
 // }
 
-export const updateUser = async (id: number , name: string): Promise<AuthUser | null> => {
-    const user = users.find((user) => user.id === id)
-    if(!user) {
-        return null
-    }
+export const updateUser = async (id: number , name: string)  => {
+    try {
+    return prisma.user.update({
+        where: {
+            id
+        },
+        data: {
+            name
+        }
+    })
+    }catch(error) {
+        if(error instanceof PrismaClientKnownRequestError && error.code === "P2025") {
+            throw new AppError("User not found", 404)
+        }
 
-    user.name = name
-    return user;
+        throw error
+    }
 
 }
 
-export const deleteUser = async (id: number): Promise<boolean> => {
-    const index = users.findIndex(user => user.id === id)
-    if(index === -1) {
-        return false
+export const deleteUser = async (id: number) => {
+    try{
+        return await prisma.user.delete({
+            where: {
+                id
+            }
+        })
+    }catch(error) {
+        if(error instanceof PrismaClientKnownRequestError && error.code === "P2025") {
+            throw new AppError("User not found", 404)
+        }
+        throw error
     }
-    users.splice(index , 1)
-    return true
+   
 }

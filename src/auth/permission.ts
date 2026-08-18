@@ -1,3 +1,4 @@
+
 export const permissions = {
     USERS_CREATE: "users:create",
     USERS_READ: "users:read",
