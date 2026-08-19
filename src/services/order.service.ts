@@ -9,10 +9,12 @@ export const getAllOrders = async () => {
     })
 }
 
-export const getOrderById = async (id: number) => {
-    return prisma.order.findUnique({
+export const getOrderById = async (id: number , userId: number) => {
+    return prisma.order.findFirst({
     where: {
-        id: id
+        id: id,
+        userId
+        
     },
 
     select: {
@@ -104,3 +106,34 @@ export const createOrder = async (
         return order;
     });
 };
+
+export const getUserOrders = async (userId: number, status?: string) => {
+    return prisma.order.findMany({
+        where: {
+            userId,
+            ...(status && {status})
+        },
+        select: {
+            id: true,
+            status: true,
+            createdAt: true,
+
+            items: {
+                select: {
+                    quantity: true,
+
+                    product: {
+                        select: {
+                            name: true,
+                            price: true
+                        }
+                    }
+                }
+            }
+
+        },
+        orderBy: {
+            createdAt: "desc"
+        }
+    })
+}
