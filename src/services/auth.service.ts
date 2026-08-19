@@ -7,12 +7,13 @@ import {
     PrismaClientKnownRequestError
 } from "@prisma/client/runtime/client.js";
 import { AppError } from "../errors/app.error.js";
+import { tr } from "zod/locales";
 
 export const findUserByEmail = async (email: string) => {
     return await prisma.user.findUnique({
         where: {
             email
-        }
+        },
     })
 }
 
