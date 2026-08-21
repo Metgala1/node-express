@@ -80,7 +80,7 @@ model Order {
   id Int @id @default(autoincrement())
 
   userId Int
-  status String @default("pending")
+  status OrderStatus @default(pending)
 
   user User @relation(fields: [userId], references: [id])
 
@@ -99,4 +99,10 @@ model OrderItem {
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
+}
+
+enum OrderStatus {
+  pending
+  completed
+  cancelled
 }

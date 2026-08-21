@@ -1,5 +1,6 @@
 import {prisma} from "../config/prisma.js"
 import { AppError } from "../errors/app.error.js"
+import { OrderStatus } from "../generated/prisma/enums.js"
 
 export const getAllOrders = async () => {
     return prisma.order.findMany({
@@ -50,90 +51,186 @@ export const getOrderById = async (id: number , userId: number) => {
 
 export const createOrder = async (
     userId: number,
-    productId: number,
-    quantity: number
+    items: {
+        productId: number;
+        quantity: number;
+    }[]
 ) => {
+
     return prisma.$transaction(async (tx) => {
-
-        if (quantity <= 0) {
-            throw new AppError(
-                "Quantity must be greater than zero",
-                400
-            );
-        }
-
-        const user = await tx.user.findUnique({
-            where: {
-                id: userId
-            }
-        });
-
-        if (!user) {
-            throw new AppError(
-                "User not found",
-                404
-            );
-        }
-
-        const product = await tx.product.findUnique({
-            where: {
-                id: productId
-            }
-        });
-
-        if (!product) {
-            throw new AppError(
-                "Product not found",
-                404
-            );
-        }
 
         const order = await tx.order.create({
             data: {
-                userId
+                userId,
+                status: "pending"
             }
         });
 
-        
-        await tx.orderItem.create({
-            data: {
-                orderId: order.id,
-                productId: product.id,
-                quantity
-            }
-        });
+        for (const item of items) {
+
+            await tx.orderItem.create({
+                data: {
+                    orderId: order.id,
+                    productId: item.productId,
+                    quantity: item.quantity
+                }
+            });
+        }
 
         return order;
     });
 };
 
-export const getUserOrders = async (userId: number, status?: string) => {
-    return prisma.order.findMany({
-        where: {
-            userId,
-            ...(status && {status})
-        },
-        select: {
-            id: true,
-            status: true,
-            createdAt: true,
 
-            items: {
+export const getUserOrders = async (
+    userId: number,
+    status?: OrderStatus,
+    page = 1,
+    limit = 10
+) => {
+
+    const skip = (page - 1) * limit;
+
+    const where = {
+        userId,
+        ...(status && { status })
+    };
+
+    const [orders, total] =
+        await prisma.$transaction([
+            prisma.order.findMany({
+                where,
+
+                skip,
+                take: limit,
+
                 select: {
-                    quantity: true,
+                    id: true,
+                    status: true,
+                    createdAt: true,
 
-                    product: {
+                    items: {
                         select: {
-                            name: true,
-                            price: true
+                            quantity: true,
+
+                            product: {
+                                select: {
+                                    name: true,
+                                    price: true
+                                }
+                            }
+                        }
+                    }
+                },
+
+                orderBy: {
+                    createdAt: "desc"
+                }
+            }),
+
+            prisma.order.count({
+                where
+            })
+        ]);
+
+    return {
+        orders,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
+};
+
+export const updateOrderStatus = async (
+    orderId: number,
+    userId: number,
+    roles: string[],
+    newStatus: OrderStatus
+    ) => {
+     const order = await prisma.order.findUnique({
+        where: {
+            id: orderId     
+        }
+     })
+
+     if(!order) {
+        throw new AppError("Order not found", 404)
+     }
+
+     const isAdmin = roles.includes("ADMIN");
+     const isSeller = roles.includes("SELLER");
+     const isCustomer = roles.includes("CUSTOMER")
+
+     if(order.status !== OrderStatus.pending) {
+        throw new AppError("Only pending orders can be updated", 400);
+     }
+    
+     if(isAdmin) {
+        return prisma.order.update({
+            where: {
+                id: orderId
+            },
+            data: {
+                status: newStatus
+            }
+        })
+     }
+
+     if (isSeller) {
+
+    if (newStatus !== OrderStatus.completed) {
+        throw new AppError(
+            "Sellers can only complete orders",
+            403
+        );
+    }
+
+    const sellerOwnsProduct =
+        await prisma.order.findFirst({
+            where: {
+                id: orderId,
+
+                items: {
+                    some: {
+                        product: {
+                            sellerId: userId
                         }
                     }
                 }
             }
+        });
 
-        },
-        orderBy: {
-            createdAt: "desc"
+    if (!sellerOwnsProduct) {
+        throw new AppError(
+            "You are not authorized to modify this order",
+            403
+        );
+    }
+}
+     if(isCustomer) {
+        if(order.userId !== userId) {
+            throw new AppError("You can only modify your own orders", 403)
         }
-    })
+
+        if(newStatus !== OrderStatus.cancelled) {
+            throw new AppError("Customers can only cancel orders", 403)
+        }
+     }
+
+
+     if(!isAdmin && !isCustomer && !isSeller) {
+        throw new AppError("Forbidden", 403)
+
+     }
+     return prisma.order.update({
+        where: {
+            id: orderId
+        },
+        data: {
+            status: newStatus
+        }
+     })
 }

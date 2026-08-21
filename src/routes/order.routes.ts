@@ -1,15 +1,18 @@
 import { Router } from "express";
-import { createOrderController, getAllOrdersController, getOrderByIdController, getUserOrdersController } from "../controllers/order.controller.js";
+import { createOrderController, getAllOrdersController, getOrderByIdController, getUserOrdersController, updateOrderStatusController } from "../controllers/order.controller.js";
 import { validate } from "../middleware/validate.middleware.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { asyncHandler } from "../middleware/async.middleware.js";
 import { requireOwnership } from "../middleware/ownership.middleware.js";
+import { validateQuery } from "../middleware/query-validation.middleware.js";
+import { orderQuerySchema, updateOrderStatusSchema } from "../schemas/order.schema.js";
 
 const router = Router()
 
 router.post("/", authenticate, asyncHandler(createOrderController))
-router.get("/", authenticate, asyncHandler(getUserOrdersController))
+router.get("/", authenticate, validateQuery(orderQuerySchema), asyncHandler(getUserOrdersController))
 router.get("/:id", authenticate,  asyncHandler(getOrderByIdController))
+router.patch("/:id", authenticate, validate(updateOrderStatusSchema), asyncHandler(updateOrderStatusController))
 
 
 
