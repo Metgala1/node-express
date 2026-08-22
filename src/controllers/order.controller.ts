@@ -12,15 +12,22 @@ export const getAllOrdersController = async (req: Request , res: Response) => {
     res.json(orders)
 }
 
-export const createOrderController = async (req: Request, res: Response) => {
-    const userId = Number(req.user?.userId)
+export const createOrderController = async (
+    req: Request,
+    res: Response
+) => {
 
-    const {productId, quantity} = req.body;
+    const userId = Number(
+        req.user?.userId
+    );
 
-    const order = await createOrder(userId, [{productId, quantity}])
-    res.json(order)
+    const order = await createOrder(
+        userId,
+        req.body.items
+    );
 
-}
+    res.status(201).json(order);
+};
 
 export const getOrderByIdController = async (req: Request, res: Response) => {
     const id = Number(req.params.id)

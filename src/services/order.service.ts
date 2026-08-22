@@ -48,7 +48,6 @@ export const getOrderById = async (id: number , userId: number) => {
     }
 });
 }
-
 export const createOrder = async (
     userId: number,
     items: {
@@ -57,27 +56,47 @@ export const createOrder = async (
     }[]
 ) => {
 
-    return prisma.$transaction(async (tx) => {
+    const productIds = [
+        ...new Set(
+            items.map(item => item.productId)
+        )
+    ];
 
-        const order = await tx.order.create({
-            data: {
-                userId,
-                status: "pending"
+    const products =
+        await prisma.product.findMany({
+            where: {
+                id: {
+                    in: productIds
+                }
             }
         });
 
-        for (const item of items) {
+    if (products.length !== productIds.length) {
+        throw new AppError(
+            "One or more products were not found",
+            404
+        );
+    }
 
-            await tx.orderItem.create({
-                data: {
-                    orderId: order.id,
+    return prisma.order.create({
+        data: {
+            userId,
+
+            items: {
+                create: items.map(item => ({
                     productId: item.productId,
                     quantity: item.quantity
-                }
-            });
-        }
+                }))
+            }
+        },
 
-        return order;
+        include: {
+            items: {
+                include: {
+                    product: true
+                }
+            }
+        }
     });
 };
 
