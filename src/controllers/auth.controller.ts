@@ -36,6 +36,7 @@ export const loginController = async (req: Request , res: Response) => {
     console.log(token)
 
     res.json({
+        user,
         token: token
     })
 

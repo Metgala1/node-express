@@ -1,3 +1,4 @@
+import { prisma } from "../config/prisma.js";
 import { AppError } from "../errors/app.error.js";
 import type { Product } from "../types/product.type.js";
 
@@ -17,7 +18,13 @@ const products: Product[] = [
 ];
 
 export const getProducts = async (): Promise<Product[]> => {
-    return products
+    return await prisma.product.findMany({
+        select: {
+            id: true,
+            name: true,
+            price: true
+        }
+    })
 }
 
 export const getProductById = async (id: number): Promise<Product | null> => {

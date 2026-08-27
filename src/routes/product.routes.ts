@@ -9,7 +9,7 @@ import { requirePermission } from "../middleware/permission.middleware.js";
 const router = Router()
 
 
-router.get("/", authenticate, requirePermission("products:read"), asyncHandler(getProductsController))
+router.get("/",  asyncHandler(getProductsController))
 router.get("/:id",authenticate, requirePermission("products:read"), asyncHandler(getProductByIdController))
 router.delete("/:id", authenticate, requirePermission("products:delete"), deleteProductController)
 

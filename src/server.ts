@@ -19,7 +19,7 @@ import morgan from "morgan"
 
 
 const app = express()
-//use to parse a request body into json 
+
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
